@@ -9,5 +9,8 @@ target 'MovieApp' do
   pod 'SnapKit', '~> 5.6.0'
   pod 'Alamofire'
   pod 'SQLite.swift', '~> 0.13.3'
+  pod 'Firebase/Core'
+  pod 'Firebase/Auth'
+  pod 'GoogleSignIn'
 
 end

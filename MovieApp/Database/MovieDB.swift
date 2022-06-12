@@ -9,6 +9,7 @@ import Foundation
 import SQLite
 
 struct Movie {
+    var userEmail: String = ""
     var id: Int = 0
     var imgUrl:String = ""
     var name:String = ""
@@ -29,6 +30,7 @@ class DB {
     let rating = Expression<Double>("rating")
     let release = Expression<String>("release")
     let overview = Expression<String>("overview")
+    let userEmail = Expression<String>("userEmail")
     
     let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
     
@@ -48,6 +50,7 @@ class DB {
                 t.column(rating)
                 t.column(release)
                 t.column(overview)
+                t.column(userEmail)
             })
         }
     }
@@ -56,6 +59,7 @@ class DB {
         
         let  dbPath = path + "/db.sqlite3"
         db = try! Connection(dbPath)
+        print(dbPath)
         
         do {
             try db.scalar(watchListTable.exists)
@@ -67,28 +71,35 @@ class DB {
                 t.column(rating)
                 t.column(release)
                 t.column(overview)
+                t.column(userEmail)
             })
         }
     }
     
-    func insertMovieToFavorites(id: Int,imgUrl: String, name: String, rating: Double, release: String, overview: String) -> Int64 {
+    func insertMovieToFavorites(id: Int,imgUrl: String, name: String, rating: Double, release: String, overview: String, userEmail: String) -> Int64 {
         
         do {
-            let insert = favTable.insert( self.id <- id, self.imgUrl <- imgUrl, self.rating <- rating, self.name <- name, self.release <- release , self.overview <- overview)
+            let insert = favTable.insert( self.id <- id, self.imgUrl <- imgUrl, self.rating <- rating, self.name <- name, self.release <- release , self.overview <- overview, self.userEmail <- userEmail)
             return try db.run(insert)
         } catch  {
             return -1
         }
     }
     
-    func returnFavList() -> [Movie] {
+    func returnFavList(user: String) -> [Movie] {
         var arr:[Movie] = []
+        var userMovie: [Movie] = []
         let movies = try! db.prepare(favTable)
         for item in movies {
-            let movie = Movie(id: item[id], imgUrl: item[imgUrl], name: item[name], rating: item[rating],release: item[release], overview: item[overview] )
+            let movie = Movie(userEmail: item[userEmail], id: item[id], imgUrl: item[imgUrl], name: item[name], rating: item[rating],release: item[release], overview: item[overview] )
             arr.append(movie)
         }
-        return arr
+        for item in arr {
+            if item.userEmail == user {
+                userMovie.append(item)
+            }
+        }
+        return userMovie
     }
     
     func deleteFromFavorites( movieId: Int ) -> Int {
@@ -97,29 +108,35 @@ class DB {
     }
     
     
-    func insertMovieToWatchList(id: Int,imgUrl: String, name: String, rating: Double, release: String, overview: String) -> Int64 {
+    func insertMovieToWatchList(id: Int,imgUrl: String, name: String, rating: Double, release: String, overview: String, userEmail: String) -> Int64 {
         
         do {
-            let insert = watchListTable.insert( self.id <- id, self.imgUrl <- imgUrl, self.rating <- rating, self.name <- name, self.release <- release , self.overview <- overview)
+            let insert = watchListTable.insert( self.id <- id, self.imgUrl <- imgUrl, self.rating <- rating, self.name <- name, self.release <- release , self.overview <- overview, self.userEmail <- userEmail)
             return try db.run(insert)
         } catch  {
             return -1
         }
     }
     
-    func returnWatchList() -> [Movie] {
+    func returnWatchList(user: String) -> [Movie] {
         var arr:[Movie] = []
+        var userMovie: [Movie] = []
+        
         let movies = try! db.prepare(watchListTable)
         for item in movies {
-            let movie = Movie(id: item[id], imgUrl: item[imgUrl], name: item[name], rating: item[rating],release: item[release], overview: item[overview] )
+            let movie = Movie(userEmail: item[userEmail], id: item[id], imgUrl: item[imgUrl], name: item[name], rating: item[rating],release: item[release], overview: item[overview] )
             arr.append(movie)
         }
-        return arr
+        for item in arr {
+            if item.userEmail == user {
+                userMovie.append(item)
+            }
+        }
+        return userMovie
     }
     
     func deleteFromWatchList( movieId: Int ) -> Int {
         let movie = watchListTable.filter(Expression<Bool>(id==movieId))
         return try! db.run( movie.delete() )
     }
-    
 }

@@ -14,6 +14,7 @@ class MovieTableViewCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setViews()
+        customizeViews()
     }
     
     required init?(coder: NSCoder) {
@@ -33,5 +34,10 @@ class MovieTableViewCell: UITableViewCell {
             make.centerY.equalTo(movieImg.snp.centerY)
             make.left.equalTo(movieImg.snp.right).offset(10)
         }
+    }
+    
+    func customizeViews() {
+        self.selectionStyle = .none
+        self.movieNameLabel.lineBreakMode = .byTruncatingTail
     }
 }

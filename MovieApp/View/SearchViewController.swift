@@ -7,9 +7,10 @@
 
 import UIKit
 import SnapKit
+import FirebaseAuth
 
 class SearchViewController: UIViewController {
-
+    
     private let searchBar = UISearchBar()
     private var movieTableView = UITableView()
     private let label = UILabel()
@@ -25,7 +26,6 @@ class SearchViewController: UIViewController {
     func setViews() {
         view.addSubview(searchBar)
         view.addSubview(movieTableView)
-  
         
         searchBar.snp.makeConstraints { (make) in
             make.top.equalToSuperview().offset(90)
@@ -40,8 +40,10 @@ class SearchViewController: UIViewController {
     }
     
     func customizeviews() {
-        self.title = "Search"
+        self.title = AppConstants.searchTitle
         view.backgroundColor = .white
+        searchBar.barTintColor = .systemGray3
+        searchBar.searchTextField.backgroundColor = .white
         
         movieTableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         searchBar.delegate = (searchViewModel as UISearchBarDelegate)
@@ -49,11 +51,19 @@ class SearchViewController: UIViewController {
         movieTableView.dataSource = searchViewModel
         searchViewModel.delegate = self
         
-        //searchBar.backgroundColor = .darkGray
-        searchBar.barTintColor = .systemGray3
-        searchBar.searchTextField.backgroundColor = .white
-        
-        
+        navigationController?.navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(named: "signOut"), style: .plain, target: self, action: #selector(signOut))
+    }
+    
+    @objc func signOut() {
+        let firebaseAuth = Auth.auth()
+        do {
+            try firebaseAuth.signOut()
+            let rootVC = LoginViewController()
+            rootVC.modalPresentationStyle = .fullScreen
+            self.present(rootVC, animated: true)
+        } catch let signOutError as NSError {
+            print(signOutError)
+        }
     }
 }
 
@@ -63,14 +73,13 @@ extension SearchViewController : SearchViewModelProtocol {
     }
     func pushDetail(data: Result) {
         let vc = MovieDetailViewController()
-     //  testVC.movieData = data
         vc.imdb = data.voteAverage
         vc.name = data.originalTitle
         vc.overview = data.overview
         vc.relese = data.releaseDate
         vc.imageUrl = data.posterPath
         vc.id = data.id
-                
+        
         vc.modalPresentationStyle = .fullScreen
         vc.hidesBottomBarWhenPushed = true
         navigationController?.pushViewController(vc, animated: true)

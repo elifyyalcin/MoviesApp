@@ -7,6 +7,7 @@
 
 import UIKit
 import SQLite
+import FirebaseAuth
 
 class MovieDetailViewController: UIViewController {
     
@@ -20,6 +21,7 @@ class MovieDetailViewController: UIViewController {
     var imdb = Double()
     var relese = String()
     var name = String()
+    var userEmail = String()
     
     private let tabView = UIView()
     private let watchListButton = UIButton()
@@ -31,15 +33,17 @@ class MovieDetailViewController: UIViewController {
     let movieNameLabel = UILabel()
     let imdbLabel = UILabel()
     let dateLabel = UILabel()
+    let signOutButton = UIButton()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         self.title = name
+        userEmail = UserDefaults.standard.string(forKey: "userEmail")!
         db.connectionFavTable()
         db.connectionWatchListTable()
-        dbFavArray.append(contentsOf: db.returnFavList())
-        dbWatchListArray.append(contentsOf: db.returnWatchList())
+        dbFavArray.append(contentsOf: db.returnFavList(user: userEmail))
+        dbWatchListArray.append(contentsOf: db.returnWatchList(user: userEmail))
         setViews()
         customizeViews()
     }
@@ -55,6 +59,7 @@ class MovieDetailViewController: UIViewController {
         movieImage.addSubview(imdbLabel)
         movieImage.addSubview(dateLabel)
         view.addSubview(detailTextView)
+        view.addSubview(signOutButton)
         
         tabView.snp.makeConstraints { (make) in
             make.bottom.equalToSuperview()
@@ -103,13 +108,17 @@ class MovieDetailViewController: UIViewController {
             make.top.equalTo(movieImage.snp.bottom).offset(10)
             make.left.equalToSuperview().offset(10)
             make.right.equalToSuperview().offset(-10)
-            make.bottom.equalTo(tabView.snp.top).offset(5)
+            make.bottom.equalTo(signOutButton.snp.top).offset(-5)
         }
-        
+        signOutButton.snp.makeConstraints { (make) in
+            make.bottom.equalTo(tabView.snp.top).offset(-5)
+            make.right.equalToSuperview().offset(-5)
+            make.width.height.equalTo(20)
+        }
     }
     
     func customizeViews() {
-
+        tabView.backgroundColor = .systemGray6
         
         dateLabel.textColor = .white
         dateLabel.font = .systemFont(ofSize: 16, weight: .bold)
@@ -117,72 +126,90 @@ class MovieDetailViewController: UIViewController {
         
         detailTextView.font = .systemFont(ofSize: 16, weight: .medium)
         detailTextView.text = overview
+        detailTextView.isUserInteractionEnabled = false
+        detailTextView.showsVerticalScrollIndicator = false
+        
         movieNameLabel.textColor = .white
         movieNameLabel.font = .systemFont(ofSize: 18, weight: .bold)
         movieNameLabel.text = name
-        
         
         imdbLabel.textColor = .white
         imdbLabel.font = .systemFont(ofSize: 16, weight: .bold)
         imdbLabel.text = String(imdb)
         
-        let url = URL(string: "https://image.tmdb.org/t/p/w500\(imageUrl)")
+        signOutButton.setBackgroundImage(UIImage(named: "signOut"), for: .normal)
+        signOutButton.addTarget(self, action: #selector(signOut), for: .touchUpInside)
+        
+        let url = URL(string: "\(AppConstants.imagePath)\(imageUrl)")
         let data = try! Data(contentsOf: url!)
         movieImage.image = UIImage(data: data)
         
-        dateIcon.image = UIImage(named: "calendar")
-        starIcon.image = UIImage(named: "star")
+        dateIcon.image = AppConstants.dateIcon
+        starIcon.image = AppConstants.starIcon
         
         if !dbFavArray.isEmpty {
             var idArray = [Int]()
             for index in 0...dbFavArray.count - 1 {
                 idArray.append(dbFavArray[index].id)
             }
-
+            
             if idArray.contains(id) {
-                favButton.setBackgroundImage(UIImage(named: "heartfilled"), for: .normal)
+                favButton.setBackgroundImage(AppConstants.favButtonFilled, for: .normal)
             } else {
-                favButton.setBackgroundImage(UIImage(named: "heart"), for: .normal)
+                favButton.setBackgroundImage(AppConstants.favButton, for: .normal)
             }
         } else {
-            favButton.setBackgroundImage(UIImage(named: "heart"), for: .normal)
+            favButton.setBackgroundImage(AppConstants.favButton, for: .normal)
         }
         
         if !dbWatchListArray.isEmpty {
+            var idArray = [Int]()
             for index in 0...dbWatchListArray.count - 1 {
-                if(dbWatchListArray[index].id == id) {
-                    watchListButton.setBackgroundImage(UIImage(named: "listfilled"), for: .normal)
-                } else {
-                    watchListButton.setBackgroundImage(UIImage(named: "list"), for: .normal)
-                }
+                idArray.append(dbWatchListArray[index].id)
+            }
+            
+            if idArray.contains(id) {
+                watchListButton.setBackgroundImage(AppConstants.watchListButtonFilled, for: .normal)
+            } else {
+                watchListButton.setBackgroundImage(AppConstants.watchListButton, for: .normal)
             }
         } else {
-            watchListButton.setBackgroundImage(UIImage(named: "list"), for: .normal)
+            watchListButton.setBackgroundImage(AppConstants.watchListButton, for: .normal)
         }
-        
-        tabView.backgroundColor = .systemGray6
         
         favButton.addTarget(self, action: #selector(addToFavorites), for: .touchUpInside)
         watchListButton.addTarget(self, action: #selector(addToWatchList), for: .touchUpInside)
     }
     
     @objc func addToFavorites() {
-        let isExist = db.insertMovieToFavorites(id: id, imgUrl: imageUrl, name: name, rating: imdb , release: relese, overview: overview)
+        let isExist = db.insertMovieToFavorites(id: id, imgUrl: imageUrl, name: name, rating: imdb , release: relese, overview: overview, userEmail: userEmail)
         if isExist == -1 {
             db.deleteFromFavorites(movieId: id)
-            favButton.setBackgroundImage(UIImage(named: "heart"), for: .normal)
+            favButton.setBackgroundImage(AppConstants.favButton, for: .normal)
         } else {
-            favButton.setBackgroundImage(UIImage(named: "heartfilled"), for: .normal)
+            favButton.setBackgroundImage(AppConstants.favButtonFilled, for: .normal)
         }
     }
     
     @objc func addToWatchList() {
-        let isExist = db.insertMovieToWatchList(id: id, imgUrl: imageUrl, name: name, rating: imdb , release: relese, overview: overview)
+        let isExist = db.insertMovieToWatchList(id: id, imgUrl: imageUrl, name: name, rating: imdb , release: relese, overview: overview, userEmail: userEmail)
         if isExist == -1 {
             db.deleteFromWatchList(movieId: id)
-            favButton.setBackgroundImage(UIImage(named: "list"), for: .normal)
+            watchListButton.setBackgroundImage(AppConstants.watchListButton, for: .normal)
         } else {
-            favButton.setBackgroundImage(UIImage(named: "listfilled"), for: .normal)
+            watchListButton.setBackgroundImage(AppConstants.watchListButtonFilled, for: .normal)
+        }
+    }
+    
+    @objc func signOut() {
+        let firebaseAuth = Auth.auth()
+        do {
+            try firebaseAuth.signOut()
+            let rootVC = LoginViewController()
+            rootVC.modalPresentationStyle = .fullScreen
+            self.present(rootVC, animated: true)
+        } catch let signOutError as NSError {
+            print(signOutError)
         }
     }
 }

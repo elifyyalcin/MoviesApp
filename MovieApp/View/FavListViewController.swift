@@ -9,21 +9,23 @@ import UIKit
 import SQLite
 
 class FavListViewController: UIViewController {
-
+    
     private let favListTableView = UITableView()
     private var favMovieList:[Movie] = []
     private let db = DB()
+    private var userEmail = String()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.title = "Favorite List"
+        self.title = AppConstants.favListTitle
+        userEmail = UserDefaults.standard.string(forKey: "userEmail")!
         setupViews()
         customizeViews()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         db.connectionFavTable()
-        favMovieList = db.returnFavList()
+        favMovieList = db.returnFavList(user: userEmail)
         favListTableView.reloadData()
     }
     
@@ -52,7 +54,7 @@ extension FavListViewController : UITableViewDelegate, UITableViewDataSource{
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = favListTableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath) as! MovieTableViewCell
         cell.movieNameLabel.text = favMovieList[indexPath.row].name
-        let url = URL(string: "https://image.tmdb.org/t/p/w500\(favMovieList[indexPath.row].imgUrl)")
+        let url = URL(string: "\(AppConstants.imagePath)\(favMovieList[indexPath.row].imgUrl)")
         let data = try! Data(contentsOf: url!)
         cell.movieImg.image = UIImage(data: data)
         return cell
@@ -69,6 +71,4 @@ extension FavListViewController : UITableViewDelegate, UITableViewDataSource{
         vc.hidesBottomBarWhenPushed = true
         navigationController?.pushViewController(vc, animated: true)
     }
-    
-    
 }
